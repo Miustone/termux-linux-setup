@@ -95,8 +95,77 @@ BANNER
     echo ""
 }
 
+# ============== WIPE FUNCTION ==============
+wipe_previous_installation() {
+    echo -e "${YELLOW}[!] Previous installation detected.${NC}"
+    read -p "  Do you want to wipe the previous installation and start fresh? (y/N): " WIPE_CHOICE
+    if [[ ! "$WIPE_CHOICE" =~ ^[Yy]$ ]]; then
+        echo -e "\n${RED}[-] Aborting. To proceed with a fresh install, please remove the old files manually or run this script again and choose 'y'.${NC}"
+        exit 1
+    fi
+
+    echo -e "\n${PURPLE}================ Wiping Previous Installation =================${NC}"
+
+    # Stop any running sessions
+    if [ -f ~/stop-linux.sh ]; then
+        (bash ~/stop-linux.sh > /dev/null 2>&1) &
+        spinner $! "Stopping any active sessions..."
+    fi
+
+    # Remove files and directories
+    (rm -rf ~/demo_python ~/Desktop ~/.config/autostart ~/.config/plasma-workspace ~/.config/linux-gpu.sh ~/start-linux.sh ~/stop-linux.sh ~/.config/autostart/plank.desktop > /dev/null 2>&1) &
+    spinner $! "Removing configuration files and scripts..."
+    
+    # Remove symlinks
+    (rm -f /data/data/com.termux/files/usr/bin/wine /data/data/com.termux/files/usr/bin/winecfg > /dev/null 2>&1) &
+    spinner $! "Removing Wine symlinks..."
+
+    # Uninstall packages
+    PKGS_TO_REMOVE=(
+        xfce4 xfce4-terminal xfce4-whiskermenu-plugin plank-reloaded thunar mousepad
+        lxqt qterminal pcmanfm-qt featherpad
+        mate mate-tweak mate-terminal
+        plasma-desktop konsole dolphin
+        gnome gnome-terminal nautilus
+        termux-x11-nightly xorg-xrandr
+        mesa-zink mesa-vulkan-icd-freedreno vulkan-loader-android
+        pulseaudio
+        firefox vlc git wget curl
+        python
+        hangover-wine hangover-wowbox64
+        x11-repo tur-repo
+    )
+    
+    (DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge ${PKGS_TO_REMOVE[@]} > /dev/null 2>&1) &
+    spinner $! "Uninstalling packages (this may take a while)..."
+
+    (DEBIAN_FRONTEND=noninteractive apt-get autoremove -y > /dev/null 2>&1) &
+    spinner $! "Cleaning up dependencies..."
+
+    (pip uninstall -y flask > /dev/null 2>&1) &
+    spinner $! "Uninstalling Flask..."
+
+    echo -e "\n${GREEN}[+] Wipe complete. Proceeding with fresh installation.${NC}"
+    echo -e "${PURPLE}============================================================${NC}\n"
+    sleep 3
+}
+
+# Function to check for previous install and offer to wipe
+check_for_previous_install() {
+    # Check for a few key files/dirs created by the script
+    if [ -f ~/start-linux.sh ] || [ -d ~/demo_python ] || [ -d ~/Desktop ]; then
+        wipe_previous_installation
+    fi
+}
+
 # ============== DEVICE & USER SELECTION ==============
 setup_environment() {
+
+    echo "${PURPLE}[*]Preparing Termux Environment...${NC}"
+    termux-setup-storage
+    apt update
+    apt upgrade -y
+    
     echo -e "${PURPLE}[*] Detecting your device...${NC}"
     echo ""
     
@@ -506,6 +575,7 @@ COMPLETE
 
 # ============== MAIN ==============
 main() {
+    check_for_previous_install
     show_banner
     setup_environment
     

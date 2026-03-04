@@ -11,7 +11,7 @@
 #######################################################
 
 # ============== CONFIGURATION ==============
-TOTAL_STEPS=11
+TOTAL_STEPS=11 # IMPORTANT: Update this if you add/remove a step_ function
 CURRENT_STEP=0
 DE_CHOICE="1"
 DE_NAME="XFCE4"
@@ -109,14 +109,15 @@ setup_environment() {
     echo -e "  [*] Device: ${WHITE}${DEVICE_BRAND} ${DEVICE_MODEL}${NC}"
     echo -e "  [*] Android: ${WHITE}${ANDROID_VERSION}${NC}"
     
-    if [[ "$GPU_VENDOR" == *"adreno"* ]] || [[ "$DEVICE_BRAND" == *"samsung"* ]] || [[ "$DEVICE_BRAND" == *"Samsung"* ]] || [[ "$DEVICE_BRAND" == *"oneplus"* ]] || [[ "$DEVICE_BRAND" == *"xiaomi"* ]]; then
+    brand_lower=$(echo "$DEVICE_BRAND" | tr '[:upper:]' '[:lower:]')
+    if [[ "$GPU_VENDOR" == *"adreno"* ]] || [[ "$brand_lower" == "samsung" ]] || [[ "$brand_lower" == "oneplus" ]] || [[ "$brand_lower" == "xiaomi" ]]; then
         GPU_DRIVER="freedreno"
         echo -e "  [*] GPU: ${WHITE}Adreno (Qualcomm) - Hardware Acceleration Supported${NC}"
     else
         GPU_DRIVER="zink_native"
         echo -e "  [*] GPU: ${WHITE}Non-Adreno - Zink Native Vulkan${NC}"
         echo -e "${YELLOW}      [!] WARNING: Your device may not fully support advanced GPU acceleration.${NC}"
-        echo -e "${YELLOW}      [!] We HIGHLY RECOMMEND choosing LXQt or XFCE for smooth performance.${NC}"
+        echo -e "${YELLOW}      [!] We HIGHLY RECOMMEND choosing XFCE or LXQt for smooth performance.${NC}"
     fi
     echo ""
     
@@ -124,16 +125,17 @@ setup_environment() {
     echo -e "  ${WHITE}1) XFCE4${NC}       (Recommended - Fast, Customizable, macOS style dock)"
     echo -e "  ${WHITE}2) LXQt${NC}        (Ultra lightweight - Best for low end devices)"
     echo -e "  ${WHITE}3) MATE${NC}        (Classic UI, moderately heavy)"
-    echo -e "  ${WHITE}4) KDE Plasma${NC}  (Very heavy - Modern, Windows 11 style, requires strong GPU/RAM)"
+    echo -e "  ${WHITE}4) KDE Plasma${NC}  (Heavy - Modern, Windows 11 style, requires strong GPU/RAM)"
+    echo -e "  ${WHITE}5) GNOME${NC}       (Very heavy - Not recommended for most devices)"
     echo ""
     while true; do
-        read -p "Enter number (1-4) [default: 1]: " DE_INPUT
+        read -p "Enter number (1-5) [default: 1]: " DE_INPUT
         DE_INPUT=${DE_INPUT:-1}
-        if [[ "$DE_INPUT" =~ ^[1-4]$ ]]; then
+        if [[ "$DE_INPUT" =~ ^[1-5]$ ]]; then
             DE_CHOICE="$DE_INPUT"
             break
         else
-            echo "Invalid input. Please enter 1, 2, 3, or 4."
+            echo "Invalid input. Please enter 1, 2, 3, 4, or 5."
         fi
     done
     
@@ -142,6 +144,7 @@ setup_environment() {
         2) DE_NAME="LXQt";;
         3) DE_NAME="MATE";;
         4) DE_NAME="KDE Plasma";;
+        5) DE_NAME="GNOME";;
     esac
     
     echo -e "\n${GREEN}[+] Selected: ${DE_NAME}.${NC}"
@@ -208,6 +211,11 @@ step_desktop() {
         install_pkg "plasma-desktop" "KDE Plasma"
         install_pkg "konsole" "Konsole"
         install_pkg "dolphin" "Dolphin"
+    elif [ "$DE_CHOICE" == "5" ]; then
+        # GNOME
+        install_pkg "gnome" "GNOME Desktop"
+        install_pkg "gnome-terminal" "GNOME Terminal"
+        install_pkg "nautilus" "Nautilus File Manager"
     fi
 }
 
@@ -287,6 +295,7 @@ step_wine() {
     install_pkg "hangover-wine" "Wine Compatibility Layer"
     install_pkg "hangover-wowbox64" "Box64 Wrapper"
     
+    mkdir -p /data/data/com.termux/files/usr/bin/
     ln -sf /data/data/com.termux/files/usr/opt/hangover-wine/bin/wine /data/data/com.termux/files/usr/bin/wine
     ln -sf /data/data/com.termux/files/usr/opt/hangover-wine/bin/winecfg /data/data/com.termux/files/usr/bin/winecfg
 }
@@ -310,7 +319,7 @@ step_launchers() {
     fi
     
     # GPU & Environment Config
-    cat > ~/.config/linux-gpu.sh << EOF
+    cat > ~/.config/linux-gpu.sh << 'EOF'
 export MESA_NO_ERROR=1
 export MESA_GL_VERSION_OVERRIDE=4.6
 export MESA_GLES_VERSION_OVERRIDE=3.2
@@ -320,7 +329,7 @@ export TU_DEBUG=noconform
 export MESA_VK_WSI_PRESENT_MODE=immediate
 export ZINK_DESCRIPTORS=lazy
 EOF
-
+    
     if [ "$DE_CHOICE" == "4" ]; then
         echo "export KWIN_COMPOSE=O2ES" >> ~/.config/linux-gpu.sh
     else
@@ -358,9 +367,12 @@ PLANKEOF
             KILL_CMD="pkill -9 mate-session; pkill -9 plank"
             ;;
         4)
-            EXEC_CMD="(sleep 5 && pkill -9 plasmashell && plasmashell) > /dev/null 2>&1 &\nexec startplasma-x11"
+            EXEC_CMD="exec startplasma-x11"
             KILL_CMD="pkill -9 startplasma-x11; pkill -9 kwin_x11"
             ;;
+        5)
+            EXEC_CMD="exec gnome-session"
+            KILL_CMD="pkill -9 gnome-session"    
     esac
 
     # Main Launcher
@@ -453,6 +465,7 @@ EOF
     if [ "$DE_CHOICE" == "2" ]; then term_cmd="qterminal"; fi
     if [ "$DE_CHOICE" == "3" ]; then term_cmd="mate-terminal"; fi
     if [ "$DE_CHOICE" == "4" ]; then term_cmd="konsole"; fi
+    if [ "$DE_CHOICE" == "5" ]; then term_cmd="gnome-terminal"; fi
     
     cat > ~/Desktop/Terminal.desktop << EOF
 [Desktop Entry]

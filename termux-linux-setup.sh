@@ -212,7 +212,8 @@ step_desktop() {
         install_pkg "dolphin" "Dolphin"
     elif [ "$DE_CHOICE" == "5" ]; then
         # GNOME
-        install_pkg "gnome" "GNOME Desktop"
+        install_pkg "gnome-shell" "GNOME Shell"
+        install_pkg "gnome-session" "GNOME Session"
         install_pkg "gnome-terminal" "GNOME Terminal"
         install_pkg "nautilus" "Nautilus File Manager"
     fi
@@ -227,7 +228,7 @@ step_gpu() {
     if [ "$GPU_DRIVER" == "freedreno" ]; then
         install_pkg "mesa-vulkan-icd-freedreno" "Turnip Adreno Driver"
     fi
-    install_pkg "vulkan-loader-android" "Vulkan Loader"
+    install_pkg "vulkan-loader" "Vulkan Loader"
 }
 
 # ============== STEP 6: INSTALL AUDIO ==============

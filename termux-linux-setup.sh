@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 #######################################################
 #  Termux Linux Setup Script
 #  
@@ -160,12 +160,7 @@ check_for_previous_install() {
 
 # ============== DEVICE & USER SELECTION ==============
 setup_environment() {
-
-    echo "${PURPLE}[*]Preparing Termux Environment...${NC}"
-    termux-setup-storage
-    apt update
-    apt upgrade -y
-    
+  
     echo -e "${PURPLE}[*] Detecting your device...${NC}"
     echo ""
     

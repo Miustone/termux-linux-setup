@@ -365,7 +365,7 @@ PLANKEOF
             KILL_CMD="pkill -9 mate-session; pkill -9 plank"
             ;;
         4)
-            EXEC_CMD="(exec startplasma-x11"
+            EXEC_CMD="exec startplasma-x11"
             KILL_CMD="pkill -9 startplasma-x11; pkill -9 kwin_x11"
             ;;
         5)

@@ -11,7 +11,7 @@
 #######################################################
 
 # ============== CONFIGURATION ==============
-TOTAL_STEPS=11 # IMPORTANT: Update this if you add/remove a step_ function
+TOTAL_STEPS=11
 CURRENT_STEP=0
 DE_CHOICE="1"
 DE_NAME="XFCE4"
@@ -95,72 +95,8 @@ BANNER
     echo ""
 }
 
-# ============== WIPE FUNCTION ==============
-wipe_previous_installation() {
-    echo -e "${YELLOW}[!] Previous installation detected.${NC}"
-    read -p "  Do you want to wipe the previous installation and start fresh? (y/N): " WIPE_CHOICE
-    if [[ ! "$WIPE_CHOICE" =~ ^[Yy]$ ]]; then
-        echo -e "\n${RED}[-] Aborting. To proceed with a fresh install, please remove the old files manually or run this script again and choose 'y'.${NC}"
-        exit 1
-    fi
-
-    echo -e "\n${PURPLE}================ Wiping Previous Installation =================${NC}"
-
-    # Stop any running sessions
-    if [ -f ~/stop-linux.sh ]; then
-        (bash ~/stop-linux.sh > /dev/null 2>&1) &
-        spinner $! "Stopping any active sessions..."
-    fi
-
-    # Remove files and directories
-    (rm -rf ~/demo_python ~/Desktop ~/.config/autostart ~/.config/plasma-workspace ~/.config/linux-gpu.sh ~/start-linux.sh ~/stop-linux.sh ~/.config/autostart/plank.desktop > /dev/null 2>&1) &
-    spinner $! "Removing configuration files and scripts..."
-    
-    # Remove symlinks
-    (rm -f /data/data/com.termux/files/usr/bin/wine /data/data/com.termux/files/usr/bin/winecfg > /dev/null 2>&1) &
-    spinner $! "Removing Wine symlinks..."
-
-    # Uninstall packages
-    PKGS_TO_REMOVE=(
-        xfce4 xfce4-terminal xfce4-whiskermenu-plugin plank-reloaded thunar mousepad
-        lxqt qterminal pcmanfm-qt featherpad
-        mate mate-tweak mate-terminal
-        plasma-desktop konsole dolphin
-        gnome gnome-terminal nautilus
-        termux-x11-nightly xorg-xrandr
-        mesa-zink mesa-vulkan-icd-freedreno vulkan-loader-android
-        pulseaudio
-        firefox vlc git wget curl
-        python
-        hangover-wine hangover-wowbox64
-        x11-repo tur-repo
-    )
-    
-    (DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge ${PKGS_TO_REMOVE[@]} > /dev/null 2>&1) &
-    spinner $! "Uninstalling packages (this may take a while)..."
-
-    (DEBIAN_FRONTEND=noninteractive apt-get autoremove -y > /dev/null 2>&1) &
-    spinner $! "Cleaning up dependencies..."
-
-    (pip uninstall -y flask > /dev/null 2>&1) &
-    spinner $! "Uninstalling Flask..."
-
-    echo -e "\n${GREEN}[+] Wipe complete. Proceeding with fresh installation.${NC}"
-    echo -e "${PURPLE}============================================================${NC}\n"
-    sleep 3
-}
-
-# Function to check for previous install and offer to wipe
-check_for_previous_install() {
-    # Check for a few key files/dirs created by the script
-    if [ -f ~/start-linux.sh ] || [ -d ~/demo_python ] || [ -d ~/Desktop ]; then
-        wipe_previous_installation
-    fi
-}
-
 # ============== DEVICE & USER SELECTION ==============
 setup_environment() {
-  
     echo -e "${PURPLE}[*] Detecting your device...${NC}"
     echo ""
     
@@ -173,15 +109,14 @@ setup_environment() {
     echo -e "  [*] Device: ${WHITE}${DEVICE_BRAND} ${DEVICE_MODEL}${NC}"
     echo -e "  [*] Android: ${WHITE}${ANDROID_VERSION}${NC}"
     
-    brand_lower=$(echo "$DEVICE_BRAND" | tr '[:upper:]' '[:lower:]')
-    if [[ "$GPU_VENDOR" == *"adreno"* ]] || [[ "$brand_lower" == "samsung" ]] || [[ "$brand_lower" == "oneplus" ]] || [[ "$brand_lower" == "xiaomi" ]]; then
+    if [[ "$GPU_VENDOR" == *"adreno"* ]] || [[ "$DEVICE_BRAND" == *"samsung"* ]] || [[ "$DEVICE_BRAND" == *"Samsung"* ]] || [[ "$DEVICE_BRAND" == *"oneplus"* ]] || [[ "$DEVICE_BRAND" == *"xiaomi"* ]]; then
         GPU_DRIVER="freedreno"
         echo -e "  [*] GPU: ${WHITE}Adreno (Qualcomm) - Hardware Acceleration Supported${NC}"
     else
         GPU_DRIVER="zink_native"
         echo -e "  [*] GPU: ${WHITE}Non-Adreno - Zink Native Vulkan${NC}"
         echo -e "${YELLOW}      [!] WARNING: Your device may not fully support advanced GPU acceleration.${NC}"
-        echo -e "${YELLOW}      [!] We HIGHLY RECOMMEND choosing XFCE or LXQt for smooth performance.${NC}"
+        echo -e "${YELLOW}      [!] We HIGHLY RECOMMEND choosing LXQt or XFCE for smooth performance.${NC}"
     fi
     echo ""
     
@@ -190,7 +125,7 @@ setup_environment() {
     echo -e "  ${WHITE}2) LXQt${NC}        (Ultra lightweight - Best for low end devices)"
     echo -e "  ${WHITE}3) MATE${NC}        (Classic UI, moderately heavy)"
     echo -e "  ${WHITE}4) KDE Plasma${NC}  (Heavy - Modern, Windows 11 style, requires strong GPU/RAM)"
-    echo -e "  ${WHITE}5) GNOME${NC}       (Very heavy - Not recommended for most devices)"
+    echo -e "  ${WHITE}5) GNOME${NC}       (Very heavy - Modern, touch-friendly, requires strong GPU/RAM)"
     echo ""
     while true; do
         read -p "Enter number (1-5) [default: 1]: " DE_INPUT
@@ -359,7 +294,6 @@ step_wine() {
     install_pkg "hangover-wine" "Wine Compatibility Layer"
     install_pkg "hangover-wowbox64" "Box64 Wrapper"
     
-    mkdir -p /data/data/com.termux/files/usr/bin/
     ln -sf /data/data/com.termux/files/usr/opt/hangover-wine/bin/wine /data/data/com.termux/files/usr/bin/wine
     ln -sf /data/data/com.termux/files/usr/opt/hangover-wine/bin/winecfg /data/data/com.termux/files/usr/bin/winecfg
 }
@@ -383,7 +317,7 @@ step_launchers() {
     fi
     
     # GPU & Environment Config
-    cat > ~/.config/linux-gpu.sh << 'EOF'
+    cat > ~/.config/linux-gpu.sh << EOF
 export MESA_NO_ERROR=1
 export MESA_GL_VERSION_OVERRIDE=4.6
 export MESA_GLES_VERSION_OVERRIDE=3.2
@@ -393,7 +327,7 @@ export TU_DEBUG=noconform
 export MESA_VK_WSI_PRESENT_MODE=immediate
 export ZINK_DESCRIPTORS=lazy
 EOF
-    
+
     if [ "$DE_CHOICE" == "4" ]; then
         echo "export KWIN_COMPOSE=O2ES" >> ~/.config/linux-gpu.sh
     else
@@ -431,12 +365,13 @@ PLANKEOF
             KILL_CMD="pkill -9 mate-session; pkill -9 plank"
             ;;
         4)
-            EXEC_CMD="exec startplasma-x11"
+            EXEC_CMD="(exec startplasma-x11"
             KILL_CMD="pkill -9 startplasma-x11; pkill -9 kwin_x11"
             ;;
         5)
             EXEC_CMD="exec gnome-session"
-            KILL_CMD="pkill -9 gnome-session"    
+            KILL_CMD="pkill -9 gnome-session"
+            ;;
     esac
 
     # Main Launcher
@@ -570,7 +505,6 @@ COMPLETE
 
 # ============== MAIN ==============
 main() {
-    check_for_previous_install
     show_banner
     setup_environment
     
@@ -590,4 +524,3 @@ main() {
 }
 
 main
-
